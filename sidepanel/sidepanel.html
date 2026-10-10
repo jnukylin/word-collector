@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <header class="head">
+    <div class="title">拾词 · 生词本</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="list">词表</button>
+      <button class="tab" data-tab="cards">抽认卡</button>
+    </nav>
+  </header>
+
+  <!-- ============ 词表页 ============ -->
+  <section id="view-list" class="view active">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="搜索单词 / 释义…" />
+      <select id="sort">
+        <option value="recent">按时间</option>
+        <option value="alpha">按字母</option>
+      </select>
+    </div>
+    <div class="filters" id="filters">
+      <button class="chip active" data-filter="all">全部</button>
+      <button class="chip" data-filter="notmastered">学习中</button>
+      <button class="chip" data-filter="mastered">已掌握</button>
+      <span class="flex1"></span>
+      <button class="tool" id="btn-export-csv" title="导出 CSV（Excel / Anki 可用）">CSV</button>
+      <button class="tool" id="btn-export-json" title="导出 JSON 备份">备份</button>
+      <button class="tool" id="btn-import-json" title="导入 JSON 备份">导入</button>
+      <input type="file" id="file-json" accept=".json,application/json" hidden />
+    </div>
+    <div class="statsline" id="statsline"></div>
+    <ul id="word-list" class="word-list"></ul>
+  </section>
+
+  <!-- ============ 抽认卡页 ============ -->
+  <section id="view-cards" class="view">
+    <div id="card-empty" class="card-empty hidden">
+      <div class="big">🎉</div>
+      <p>当前没有待复习的词。</p>
+      <p class="dim">已掌握的词不会进入复习队列。去词表里看看，或继续阅读、收录新词吧。</p>
+    </div>
+
+    <div id="card" class="card hidden">
+      <div class="card-count" id="card-count"></div>
+      <div class="card-word" id="card-word"></div>
+      <div class="card-phonetic" id="card-phonetic"></div>
+      <button class="card-speak" id="card-speak">🔊 发音</button>
+
+      <div class="card-answer hidden" id="card-answer">
+        <div class="card-tran" id="card-tran"></div>
+        <div class="card-def" id="card-def"></div>
+        <div class="card-context" id="card-context"></div>
+        <div class="card-source" id="card-source"></div>
+      </div>
+
+      <div class="card-actions" id="card-actions"></div>
+      <div class="card-hint">空格 = 翻面 · 1 = 不认识 · 2 = 认识</div>
+    </div>
+
+    <div id="card-summary" class="card-summary hidden"></div>
+  </section>
+
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

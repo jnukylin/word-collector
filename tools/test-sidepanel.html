@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- 测试页：mock chrome 环境 + 真实的 sidepanel.js，用于本地复现渲染问题 -->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/sidepanel/sidepanel.css" />
+  <style>
+    #test-errors { background: #b3261e; color: #fff; font-size: 12px; padding: 4px 8px; white-space: pre-wrap; }
+    #test-ctrl { background: #eee; padding: 4px 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="test-errors"></div>
+  <div id="test-ctrl">
+    <button onclick="window.__mock.simulateLookupWriteback()">模拟查词写回(onChanged)</button>
+    <button onclick="window.__mock.dumpStorage()">打印存储</button>
+  </div>
+
+  <header class="head">
+    <div class="title">拾词 · 生词本</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="list">词表</button>
+      <button class="tab" data-tab="cards">抽认卡</button>
+    </nav>
+  </header>
+
+  <section id="view-list" class="view active">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="搜索单词 / 释义…" />
+      <select id="sort">
+        <option value="recent">按时间</option>
+        <option value="alpha">按字母</option>
+      </select>
+    </div>
+    <div class="filters" id="filters">
+      <button class="chip active" data-filter="all">全部</button>
+      <button class="chip" data-filter="notmastered">学习中</button>
+      <button class="chip" data-filter="mastered">已掌握</button>
+      <span class="flex1"></span>
+      <button class="tool" id="btn-export-csv" title="导出 CSV（Excel / Anki 可用）">CSV</button>
+      <button class="tool" id="btn-export-json" title="导出 JSON 备份">备份</button>
+      <button class="tool" id="btn-import-json" title="导入 JSON 备份">导入</button>
+      <input type="file" id="file-json" accept=".json,application/json" hidden />
+    </div>
+    <div class="statsline" id="statsline"></div>
+    <ul id="word-list" class="word-list"></ul>
+  </section>
+
+  <section id="view-cards" class="view">
+    <div id="card-empty" class="card-empty hidden">
+      <div class="big">🎉</div>
+      <p>当前没有待复习的词。</p>
+      <p class="dim">已掌握的词不会进入复习队列。去词表里看看，或继续阅读、收录新词吧。</p>
+    </div>
+    <div id="card" class="card hidden">
+      <div class="card-count" id="card-count"></div>
+      <div class="card-word" id="card-word"></div>
+      <div class="card-phonetic" id="card-phonetic"></div>
+      <button class="card-speak" id="card-speak">🔊 发音</button>
+      <div class="card-answer hidden" id="card-answer">
+        <div class="card-tran" id="card-tran"></div>
+        <div class="card-def" id="card-def"></div>
+        <div class="card-context" id="card-context"></div>
+        <div class="card-source" id="card-source"></div>
+      </div>
+      <div class="card-actions" id="card-actions"></div>
+      <div class="card-hint">空格 = 翻面 · 1 = 不认识 · 2 = 认识</div>
+    </div>
+    <div id="card-summary" class="card-summary hidden"></div>
+  </section>
+
+  <script>
+  (function () {
+    function showErr(text) {
+      document.getElementById('test-errors').textContent += text + '\n';
+    }
+    window.addEventListener('error', function (e) {
+      showErr('ERROR: ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || 0));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var r = e.reason;
+      showErr('REJECTION: ' + (r && r.message ? r.message : String(r)));
+    });
+
+    var store = {
+      words: {
+        suspect: {
+          word: 'suspect', lower: 'suspect',
+          translation: '[object Object] [object Object]',
+          phonetic: '/səˈspekt/', definition: '',
+          context: 'The police suspect him of committing the crime.',
+          url: 'https://example.com/news/article', title: 'Example News',
+          count: 1, addedAt: Date.now() - 3600e3,
+          status: 'new', known: 0, unknown: 0, lastReviewAt: null
+        },
+        investigations: {
+          word: 'investigations', lower: 'investigations',
+          translation: '[object Object] [object Object]',
+          phonetic: '/ɪnˌvestɪˈɡeɪʃənz/', definition: '',
+          context: 'The investigations lasted for two years.',
+          url: 'https://example.com/news/article', title: 'Example News',
+          count: 1, addedAt: Date.now() - 1800e3,
+          status: 'new', known: 0, unknown: 0, lastReviewAt: null
+        }
+      },
+      meta: { date: '2026-10-10', count: 2 }
+    };
+    var listeners = [];
+    function fire() {
+      listeners.forEach(function (fn) { fn({ words: { newValue: store.words } }, 'local'); });
+    }
+    window.chrome = {
+      storage: {
+        local: {
+          get: function (key) {
+            return Promise.resolve(key in store ? { [key]: store[key] } : {});
+          },
+          set: function (obj) {
+            Object.assign(store, obj);
+            return Promise.resolve();
+          }
+        },
+        onChanged: { addListener: function (fn) { listeners.push(fn); } }
+      },
+      runtime: { sendMessage: function () { return Promise.resolve({ ok: true }); } }
+    };
+    window.__mock = {
+      simulateLookupWriteback: function () {
+        store.words.suspect.translation = 'v. 怀疑；n. 嫌疑犯';
+        fire();
+      },
+      dumpStorage: function () {
+        console.log(JSON.stringify(store.words, null, 2));
+        showErr('存储词数: ' + Object.keys(store.words).length + '（详见控制台）');
+      }
+    };
+  })();
+  </script>
+  <script type="module" src="/sidepanel/sidepanel.js?v=2"></script>
+</body>
+</html>
